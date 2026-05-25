@@ -1,316 +1,421 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>NHS Waiting Times Analysis — March 2026</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>NHS Waiting Times Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --navy:#0d1b4b;--blue:#1a56db;--teal:#1D9E75;--red:#ef4444;--amber:#f59e0b;
+  --bg:#f3f4f6;--card:#fff;--text:#111827;--muted:#6b7280;--border:#e5e7eb;
+  --radius:10px;
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.5}
 
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      background: #f8f9fa;
-      color: #1a1a2e;
-      line-height: 1.6;
-    }
+header{background:var(--navy);color:#fff;padding:1rem;border-bottom:3px solid var(--blue)}
+.header-tag{font-size:0.65rem;letter-spacing:.12em;text-transform:uppercase;color:#7eb3f5;margin-bottom:.35rem}
+header h1{font-size:1.2rem;font-weight:700;letter-spacing:-.02em;margin-bottom:.25rem}
+header p{color:#a8c4f0;font-size:.78rem;margin-bottom:.6rem;max-width:560px}
+.header-meta{display:flex;flex-wrap:wrap;gap:.4rem .6rem;font-size:.68rem;color:#7eb3f5}
+.header-meta a{color:#7eb3f5}
 
-    header {
-      background: #0d1b4b;
-      color: white;
-      padding: 3rem 2rem 2rem;
-      border-bottom: 4px solid #1a56db;
-    }
+.tabs{display:flex;background:var(--card);border-bottom:2px solid var(--border);overflow-x:auto;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{padding:.55rem .8rem;font-size:.75rem;font-weight:500;color:var(--muted);border:none;background:none;cursor:pointer;white-space:nowrap;border-bottom:2px solid transparent;margin-bottom:-2px;transition:color .15s,border-color .15s}
+.tab.active{color:var(--blue);border-bottom-color:var(--blue)}
+.tab:hover:not(.active){color:var(--text)}
 
-    header p.tag {
-      font-size: 0.78rem;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-      color: #7eb3f5;
-      margin-bottom: 0.75rem;
-    }
+main{max-width:900px;margin:0 auto;padding:.75rem}
+.panel{display:none}.panel.active{display:block}
 
-    header h1 {
-      font-size: 2rem;
-      font-weight: 700;
-      letter-spacing: -0.02em;
-      margin-bottom: 0.5rem;
-    }
+.metric-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:.6rem;margin-bottom:.75rem}
+.metric{background:var(--card);border-radius:var(--radius);padding:.8rem;border-top:3px solid var(--blue);box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.metric-label{font-size:.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.2rem}
+.metric-value{font-size:1.35rem;font-weight:700;line-height:1}
+.metric-sub{font-size:.65rem;color:#9ca3af;margin-top:.2rem}
 
-    header p.sub {
-      color: #a8c4f0;
-      font-size: 0.95rem;
-      max-width: 640px;
-    }
+.card{background:var(--card);border-radius:var(--radius);padding:.9rem;box-shadow:0 1px 3px rgba(0,0,0,.06);margin-bottom:.75rem}
+.card-title{font-size:.82rem;font-weight:600;margin-bottom:.15rem}
+.card-desc{font-size:.7rem;color:var(--muted);margin-bottom:.6rem}
 
-    header .meta {
-      margin-top: 1.25rem;
-      display: flex;
-      gap: 1.5rem;
-      flex-wrap: wrap;
-      font-size: 0.82rem;
-      color: #7eb3f5;
-    }
+.legend{display:flex;flex-wrap:wrap;gap:.4rem .6rem;margin-bottom:.5rem;font-size:.68rem;color:var(--muted)}
+.legend span{display:flex;align-items:center;gap:3px}
+.leg-sq{width:8px;height:8px;border-radius:2px;flex-shrink:0}
 
-    header .meta span { display: flex; align-items: center; gap: 0.4rem; }
+.insight{background:#eff6ff;border-left:3px solid var(--blue);border-radius:0 6px 6px 0;padding:.6rem .8rem;margin-top:.6rem;font-size:.72rem;color:#1e40af}
+.insight strong{display:block;font-size:.65rem;text-transform:uppercase;letter-spacing:.05em;color:var(--blue);margin-bottom:.15rem}
+.insight.red{background:#fff5f5;border-left-color:var(--red);color:#991b1b}
+.insight.red strong{color:var(--red)}
+.insight.green{background:#f0fdf4;border-left-color:var(--teal);color:#065f46}
+.insight.green strong{color:var(--teal)}
 
-    main { max-width: 1100px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+.filter-row{display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:.75rem}
+.filter-btn{padding:.3rem .65rem;font-size:.7rem;border:1.5px solid var(--border);border-radius:999px;background:var(--card);color:var(--muted);cursor:pointer;transition:all .15s}
+.filter-btn.active{background:var(--blue);border-color:var(--blue);color:#fff}
 
-    .metric-grid {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 1rem;
-      margin-bottom: 2.5rem;
-    }
+.section-label{font-size:.65rem;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:.75rem 0 .5rem}
 
-    .metric {
-      background: white;
-      border-radius: 12px;
-      padding: 1.25rem;
-      border-top: 4px solid #1a56db;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.07);
-    }
-
-    .metric-label { font-size: 0.75rem; color: #6b7280; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.4rem; }
-    .metric-value { font-size: 1.75rem; font-weight: 700; color: #1a1a2e; line-height: 1; }
-    .metric-sub { font-size: 0.75rem; color: #9ca3af; margin-top: 0.35rem; }
-
-    .section-title {
-      font-size: 0.75rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-      color: #6b7280;
-      margin: 2.5rem 0 1rem;
-    }
-
-    .chart-box {
-      background: white;
-      border-radius: 12px;
-      padding: 1.5rem;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.07);
-      margin-bottom: 1.25rem;
-    }
-
-    .chart-box h2 {
-      font-size: 0.95rem;
-      font-weight: 600;
-      color: #1a1a2e;
-      margin-bottom: 0.35rem;
-    }
-
-    .chart-box p.desc {
-      font-size: 0.82rem;
-      color: #6b7280;
-      margin-bottom: 1rem;
-    }
-
-    .legend {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 12px;
-      margin-bottom: 1rem;
-      font-size: 0.78rem;
-      color: #6b7280;
-    }
-
-    .legend span { display: flex; align-items: center; gap: 5px; }
-    .leg-sq { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
-
-    .chart-row {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 1.25rem;
-      margin-bottom: 1.25rem;
-    }
-
-    .insight-box {
-      background: #eff6ff;
-      border-left: 4px solid #1a56db;
-      border-radius: 0 8px 8px 0;
-      padding: 1rem 1.25rem;
-      margin-top: 1rem;
-      font-size: 0.875rem;
-      color: #1e40af;
-    }
-
-    .insight-box strong { display: block; margin-bottom: 0.25rem; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.06em; color: #3b82f6; }
-
-    footer {
-      text-align: center;
-      padding: 2rem;
-      font-size: 0.78rem;
-      color: #9ca3af;
-      border-top: 1px solid #e5e7eb;
-    }
-
-    footer a { color: #1a56db; text-decoration: none; }
-
-    @media (max-width: 700px) {
-      .metric-grid { grid-template-columns: 1fr 1fr; }
-      .chart-row { grid-template-columns: 1fr; }
-      header h1 { font-size: 1.5rem; }
-    }
-  </style>
+footer{text-align:center;padding:1.25rem;font-size:.7rem;color:#9ca3af;border-top:1px solid var(--border);margin-top:.5rem}
+footer a{color:var(--blue);text-decoration:none}
+</style>
 </head>
 <body>
 
 <header>
-  <p class="tag">Data Analysis · NHS England</p>
+  <p class="header-tag">Data Analysis · NHS England</p>
   <h1>NHS Waiting Times Dashboard</h1>
-  <p class="sub">Analysis of 183,400 rows of Referral-to-Treatment (RTT) incomplete pathway data. Identifying where pressure is highest across England's NHS trusts and specialties.</p>
-  <div class="meta">
-    <span>📅 March 2026 data</span>
+  <p>183,400 rows of RTT incomplete pathway data — March 2026</p>
+  <div class="header-meta">
+    <span>📅 March 2026</span>
     <span>🏥 NHS England</span>
-    <span>📊 183,400 rows analysed</span>
-    <span>🔗 <a href="https://github.com/TalhaUsman06/nhs-waiting-times-sql" style="color:#7eb3f5;">View SQL queries on GitHub</a></span>
+    <span>🔗 <a href="https://github.com/TalhaUsman06/nhs-waiting-times-sql">SQL queries on GitHub</a></span>
   </div>
 </header>
 
+<nav class="tabs" role="tablist">
+  <button class="tab active" onclick="showPanel('overview')" role="tab">Overview</button>
+  <button class="tab" onclick="showPanel('specialties')" role="tab">Specialties</button>
+  <button class="tab" onclick="showPanel('trusts')" role="tab">Trusts</button>
+  <button class="tab" onclick="showPanel('breaches')" role="tab">52-Week Breaches</button>
+  <button class="tab" onclick="showPanel('quality')" role="tab">Data Quality</button>
+</nav>
+
 <main>
 
-  <p class="section-title">Key metrics</p>
-  <div class="metric-grid">
-    <div class="metric" style="border-top-color: #1a56db;">
-      <p class="metric-label">Total pathways waiting</p>
-      <p class="metric-value">14.09M</p>
-      <p class="metric-sub">England, March 2026</p>
+  <!-- OVERVIEW -->
+  <div id="panel-overview" class="panel active">
+    <p class="section-label">Key metrics</p>
+    <div class="metric-grid">
+      <div class="metric" style="border-top-color:var(--blue)">
+        <p class="metric-label">Total pathways waiting</p>
+        <p class="metric-value" style="color:var(--blue)">14.09M</p>
+        <p class="metric-sub">England, March 2026</p>
+      </div>
+      <div class="metric" style="border-top-color:var(--teal)">
+        <p class="metric-label">Largest trust</p>
+        <p class="metric-value" style="color:var(--teal)">347,954</p>
+        <p class="metric-sub">Mid & South Essex NHS FT</p>
+      </div>
+      <div class="metric" style="border-top-color:var(--amber)">
+        <p class="metric-label">Largest specialty</p>
+        <p class="metric-value" style="color:var(--amber)">826,172</p>
+        <p class="metric-sub">Trauma & Orthopaedic</p>
+      </div>
+      <div class="metric" style="border-top-color:var(--red)">
+        <p class="metric-label">Max 52-week breaches</p>
+        <p class="metric-value" style="color:var(--red)">2,338</p>
+        <p class="metric-sub">Mid & South Essex NHS FT</p>
+      </div>
     </div>
-    <div class="metric" style="border-top-color: #1D9E75;">
-      <p class="metric-label">Largest trust waitlist</p>
-      <p class="metric-value">347,954</p>
-      <p class="metric-sub">Mid & South Essex NHS FT</p>
-    </div>
-    <div class="metric" style="border-top-color: #f59e0b;">
-      <p class="metric-label">Largest specialty backlog</p>
-      <p class="metric-value">826,172</p>
-      <p class="metric-sub">Trauma & Orthopaedic</p>
-    </div>
-    <div class="metric" style="border-top-color: #ef4444;">
-      <p class="metric-label">Max 52-week breaches</p>
-      <p class="metric-value">2,338</p>
-      <p class="metric-sub">Mid & South Essex NHS FT</p>
-    </div>
-  </div>
 
-  <p class="section-title">Specialty breakdown</p>
-  <div class="chart-box">
-    <h2>Patients waiting by specialty</h2>
-    <p class="desc">Top 9 specialties by incomplete pathway count — excludes the "Total" aggregate row.</p>
-    <div class="legend">
-      <span><span class="leg-sq" style="background:#1a56db;"></span>Patients waiting</span>
-    </div>
-    <div style="position:relative;width:100%;height:320px;">
-      <canvas id="specChart" role="img" aria-label="Horizontal bar chart of NHS specialties by patients waiting. Trauma and Orthopaedic leads with 826,172 patients.">Trauma & Orthopaedic: 826,172. Other Medical Services: 614,175. Ophthalmology: 603,966. ENT: 580,054. Gynaecology: 555,528.</canvas>
-    </div>
-    <div class="insight-box">
-      <strong>Key insight</strong>
-      Trauma & Orthopaedic has nearly double the patients of the next highest specialty — reflecting the pandemic backlog in planned surgical procedures that has not yet cleared.
-    </div>
-  </div>
-
-  <div class="chart-row">
-    <div class="chart-box">
-      <h2>Top 10 trusts — total waitlist</h2>
-      <p class="desc">Which NHS trusts have the most patients waiting overall?</p>
+    <div class="card">
+      <p class="card-title">Patients waiting by specialty — top 9</p>
+      <p class="card-desc">Incomplete pathways only, excluding the aggregate "Total" row</p>
       <div class="legend">
-        <span><span class="leg-sq" style="background:#1D9E75;"></span>Patients waiting</span>
+        <span><span class="leg-sq" style="background:var(--blue)"></span>Patients waiting</span>
       </div>
-      <div style="position:relative;width:100%;height:360px;">
-        <canvas id="trustChart" role="img" aria-label="Bar chart of top 10 NHS trusts by total patients waiting.">Mid & South Essex: 347,954. Manchester University: 332,660. Royal Free London: 266,780.</canvas>
+      <div style="position:relative;width:100%;height:260px">
+        <canvas id="overviewSpec" role="img" aria-label="Horizontal bar chart of specialties. Trauma & Orthopaedic leads with 826,172.">Trauma & Orthopaedic: 826,172. Other Medical: 614,175. Ophthalmology: 603,966.</canvas>
       </div>
-    </div>
-    <div class="chart-box">
-      <h2>Top 10 trusts — 52-week breaches</h2>
-      <p class="desc">Patients waiting more than 52 weeks — a serious patient safety concern.</p>
-      <div class="legend">
-        <span><span class="leg-sq" style="background:#ef4444;"></span>Patients over 52 weeks</span>
-      </div>
-      <div style="position:relative;width:100%;height:360px;">
-        <canvas id="breachChart" role="img" aria-label="Bar chart of top 10 trusts by patients waiting over 52 weeks.">Mid & South Essex: 2,338. Northern Care Alliance: 928. University Hospitals Sussex: 818.</canvas>
-      </div>
-      <div class="insight-box" style="background:#fff5f5; border-left-color:#ef4444; color:#991b1b;">
-        <strong style="color:#ef4444;">52-week breach gap</strong>
-        Mid & South Essex has 2,338 patients waiting over 52 weeks — more than 2.5× the second-placed trust.
+      <div class="insight">
+        <strong>Key finding</strong>
+        Trauma & Orthopaedic has nearly double the patients of the next highest specialty — reflecting the uncleared pandemic surgical backlog.
       </div>
     </div>
   </div>
 
-  <p class="section-title">Data quality</p>
-  <div class="chart-box">
-    <h2>Data validation results</h2>
-    <p class="desc">Checking for null values and impossible figures across all 183,400 rows before drawing conclusions.</p>
-    <div style="position:relative;width:100%;height:200px;">
-      <canvas id="qualityChart" role="img" aria-label="Bar chart showing data quality results. Total rows: 183,400. Null values: 0. Negative values: 0.">Total rows: 183,400. Null totals: 0. Negative totals: 0.</canvas>
+  <!-- SPECIALTIES -->
+  <div id="panel-specialties" class="panel">
+    <div class="filter-row" id="spec-filters">
+      <button class="filter-btn active" onclick="filterSpec('all', this)">All</button>
+      <button class="filter-btn" onclick="filterSpec('surgical', this)">Surgical</button>
+      <button class="filter-btn" onclick="filterSpec('medical', this)">Medical</button>
     </div>
-    <div class="insight-box">
-      <strong>Clean dataset</strong>
-      Zero null values and zero negative values found across all 183,400 rows — the dataset is reliable for analysis without additional cleaning.
+    <div class="card">
+      <p class="card-title">All specialties — patients waiting</p>
+      <p class="card-desc">Tap a filter above to highlight surgical or medical specialties</p>
+      <div class="legend">
+        <span><span class="leg-sq" style="background:var(--blue)"></span>Waiting count</span>
+        <span><span class="leg-sq" style="background:#93c5fd"></span>Other</span>
+      </div>
+      <div style="position:relative;width:100%;height:300px">
+        <canvas id="specFull" role="img" aria-label="Bar chart of all specialties by patients waiting.">Trauma & Orthopaedic: 826,172. Other Medical: 614,175. Ophthalmology: 603,966. ENT: 580,054. Gynaecology: 555,528. Other Surgical: 467,771. Urology: 378,188. General Surgery: 376,693. Cardiology: 375,773.</canvas>
+      </div>
+    </div>
+    <div class="card">
+      <p class="card-title">Share of total waiting list by specialty</p>
+      <p class="card-desc">Top 6 specialties as proportion of all 14.09M patients</p>
+      <div style="position:relative;width:100%;height:220px">
+        <canvas id="specPie" role="img" aria-label="Doughnut chart of specialty share.">Trauma 5.9%. Other Medical 4.4%. Ophthalmology 4.3%. ENT 4.1%. Gynaecology 3.9%. Other 77.5%.</canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- TRUSTS -->
+  <div id="panel-trusts" class="panel">
+    <div class="card">
+      <p class="card-title">Top 10 trusts — total waitlist</p>
+      <p class="card-desc">NHS trusts with the most patients waiting across all specialties</p>
+      <div class="legend">
+        <span><span class="leg-sq" style="background:var(--teal)"></span>Patients</span>
+      </div>
+      <div style="position:relative;width:100%;height:300px">
+        <canvas id="trustBar" role="img" aria-label="Bar chart of top 10 trusts by total patients waiting.">Mid & South Essex: 347,954. Manchester University: 332,660. Royal Free London: 266,780.</canvas>
+      </div>
+      <div class="insight green">
+        <strong>Context</strong>
+        Larger trusts with more specialties naturally have higher totals. Compare with 52-week breaches tab for patient safety impact.
+      </div>
+    </div>
+  </div>
+
+  <!-- BREACHES -->
+  <div id="panel-breaches" class="panel">
+    <div class="card">
+      <p class="card-title">Top 10 trusts — patients waiting over 52 weeks</p>
+      <p class="card-desc">52-week waits represent a serious patient safety concern beyond the NHS 18-week target</p>
+      <div class="legend">
+        <span><span class="leg-sq" style="background:var(--red)"></span>Patients over 52 weeks</span>
+      </div>
+      <div style="position:relative;width:100%;height:300px">
+        <canvas id="breachBar" role="img" aria-label="Bar chart of top 10 trusts by 52-week breaches.">Mid & South Essex: 2,338. Northern Care Alliance: 928. University Hospitals Sussex: 818.</canvas>
+      </div>
+      <div class="insight red">
+        <strong>Significant gap</strong>
+        Mid & South Essex has 2,338 patients waiting over 52 weeks — more than 2.5× the second-placed trust (Northern Care Alliance at 928).
+      </div>
+    </div>
+
+    <div class="card">
+      <p class="card-title">52-week breaches vs total waitlist</p>
+      <p class="card-desc">Comparing overall size vs severity — a trust with fewer patients may have proportionally more breaches</p>
+      <div class="legend">
+        <span><span class="leg-sq" style="background:var(--teal)"></span>Total waiting (÷100)</span>
+        <span><span class="leg-sq" style="background:var(--red)"></span>52-week breaches</span>
+      </div>
+      <div style="position:relative;width:100%;height:260px">
+        <canvas id="compareBar" role="img" aria-label="Grouped bar chart comparing total waitlist vs 52-week breaches by trust.">Comparison of total waiting and 52-week breaches for top 10 trusts.</canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- DATA QUALITY -->
+  <div id="panel-quality" class="panel">
+    <div class="metric-grid">
+      <div class="metric" style="border-top-color:var(--teal)">
+        <p class="metric-label">Total rows</p>
+        <p class="metric-value" style="color:var(--teal)">183,400</p>
+        <p class="metric-sub">All RTT records</p>
+      </div>
+      <div class="metric" style="border-top-color:var(--teal)">
+        <p class="metric-label">Null values</p>
+        <p class="metric-value" style="color:var(--teal)">0</p>
+        <p class="metric-sub">In Total All column</p>
+      </div>
+      <div class="metric" style="border-top-color:var(--teal)">
+        <p class="metric-label">Negative values</p>
+        <p class="metric-value" style="color:var(--teal)">0</p>
+        <p class="metric-sub">Invalid figures</p>
+      </div>
+      <div class="metric" style="border-top-color:var(--blue)">
+        <p class="metric-label">RTT part types</p>
+        <p class="metric-value" style="color:var(--blue)">5</p>
+        <p class="metric-sub">Part_1A/1B/2/2A/3</p>
+      </div>
+    </div>
+    <div class="card">
+      <p class="card-title">Data validation results</p>
+      <p class="card-desc">SQL query Q5 — checking for nulls and impossible values before drawing conclusions</p>
+      <div style="position:relative;width:100%;height:180px">
+        <canvas id="qualityChart" role="img" aria-label="Bar chart showing data quality. 183,400 total rows, 0 nulls, 0 negatives.">Total rows: 183,400. Null values: 0. Negative values: 0.</canvas>
+      </div>
+      <div class="insight green">
+        <strong>Clean dataset</strong>
+        Zero nulls and zero negative values — the dataset is reliable for analysis without additional cleaning. Good practice to validate before any analysis.
+      </div>
+    </div>
+    <div class="card">
+      <p class="card-title">SQL used for this analysis</p>
+      <p class="card-desc">Key queries — see GitHub for all 7</p>
+      <pre style="font-size:.68rem;color:var(--muted);background:var(--bg);padding:.75rem;border-radius:6px;overflow-x:auto;line-height:1.6">SELECT
+  "Provider Org Name",
+  SUM(CAST("Total All" AS INTEGER))
+    AS total_waiting
+FROM waiting_times
+WHERE "RTT Part Type" = 'Part_2'
+GROUP BY "Provider Org Name"
+ORDER BY total_waiting DESC
+LIMIT 10;</pre>
     </div>
   </div>
 
 </main>
 
 <footer>
-  <p>Data source: <a href="https://www.england.nhs.uk/statistics/statistical-work-areas/rtt-waiting-times/" target="_blank">NHS England RTT Waiting Times</a> · Analysis by <a href="https://github.com/TalhaUsman06/nhs-waiting-times-sql" target="_blank">Talha Usman</a> · March 2026</p>
+  Data: <a href="https://www.england.nhs.uk/statistics/statistical-work-areas/rtt-waiting-times/" target="_blank">NHS England RTT</a> ·
+  Analysis by <a href="https://github.com/TalhaUsman06/nhs-waiting-times-sql" target="_blank">Talha Usman</a> ·
+  MSc CS, University of Law London · March 2026
 </footer>
 
 <script>
-const baseOpts = {
-  responsive: true,
-  maintainAspectRatio: false,
-  plugins: { legend: { display: false } },
-};
+function showPanel(id) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('panel-' + id).classList.add('active');
+  event.target.classList.add('active');
+  if (!window.chartsBuilt) { window.chartsBuilt = {}; }
+  if (!window.chartsBuilt[id]) { buildCharts(id); window.chartsBuilt[id] = true; }
+}
 
-const xNum = (suffix='k', divisor=1000) => ({
-  grid: { color: 'rgba(0,0,0,0.05)' },
-  ticks: { color: '#9ca3af', font: { size: 11 }, callback: v => (v/divisor).toFixed(0)+suffix }
-});
-const yText = (size=11) => ({
-  grid: { display: false },
-  ticks: { color: '#6b7280', font: { size } }
-});
+const SPEC_LABELS = ['Trauma & Ortho','Other Medical','Ophthalmology','ENT','Gynaecology','Other Surgical','Urology','Gen Surgery','Cardiology'];
+const SPEC_DATA   = [826172,614175,603966,580054,555528,467771,378188,376693,375773];
+const SURGICAL    = [true,false,false,false,false,true,true,true,false];
 
-new Chart(document.getElementById('specChart'), {
-  type: 'bar',
-  data: {
-    labels: ['Trauma & Ortho','Other Medical','Ophthalmology','ENT','Gynaecology','Other Surgical','Urology','General Surgery','Cardiology'],
-    datasets: [{ data: [826172,614175,603966,580054,555528,467771,378188,376693,375773], backgroundColor: '#1a56db', borderRadius: 4, borderSkipped: false }]
-  },
-  options: { ...baseOpts, indexAxis: 'y', scales: { x: xNum(), y: yText() } }
-});
+const TRUST_LABELS  = ['Mid & South Essex','Manchester Uni','Royal Free London','Northern Care Alliance','Barts Health','Univ Hosp Leicester','Univ Hosp Sussex',"Guy's & St Thomas'",'Univ Hosp Derby','Univ Hosp Birmingham'];
+const TRUST_DATA    = [347954,332660,266780,258442,243022,227946,225070,211576,186544,179088];
+const BREACH_LABELS = ['Mid & South Essex','Northern Care Alliance','Univ Hosp Sussex','Univ Hosp Leicester','Hull Univ Teaching','East Kent Hospitals','Manchester Uni','Oxford Univ Hosp','Royal Wolverhampton','Portsmouth Hospitals'];
+const BREACH_DATA   = [2338,928,818,744,676,582,508,464,442,432];
 
-new Chart(document.getElementById('trustChart'), {
-  type: 'bar',
-  data: {
-    labels: ['Mid & South Essex','Manchester Uni','Royal Free London','Northern Care Alliance','Barts Health','Univ Hosp Leicester','Univ Hosp Sussex','Guy\'s & St Thomas\'','Univ Hosp Derby','Univ Hosp Birmingham'],
-    datasets: [{ data: [347954,332660,266780,258442,243022,227946,225070,211576,186544,179088], backgroundColor: '#1D9E75', borderRadius: 4, borderSkipped: false }]
-  },
-  options: { ...baseOpts, indexAxis: 'y', scales: { x: xNum(), y: yText(10) } }
-});
-
-new Chart(document.getElementById('breachChart'), {
-  type: 'bar',
-  data: {
-    labels: ['Mid & South Essex','Northern Care Alliance','Univ Hosp Sussex','Univ Hosp Leicester','Hull Univ Teaching','East Kent Hospitals','Manchester Uni','Oxford Univ Hosp','Royal Wolverhampton','Portsmouth Hospitals'],
-    datasets: [{ data: [2338,928,818,744,676,582,508,464,442,432], backgroundColor: '#ef4444', borderRadius: 4, borderSkipped: false }]
-  },
-  options: { ...baseOpts, indexAxis: 'y', scales: { x: { grid: { color: 'rgba(0,0,0,0.05)' }, ticks: { color: '#9ca3af', font: { size: 11 } } }, y: yText(10) } }
-});
-
-new Chart(document.getElementById('qualityChart'), {
-  type: 'bar',
-  data: {
-    labels: ['Total rows', 'Null values', 'Negative values'],
-    datasets: [{ data: [183400, 0, 0], backgroundColor: ['#1a56db','#1D9E75','#1D9E75'], borderRadius: 4, borderSkipped: false }]
-  },
-  options: {
-    ...baseOpts,
-    scales: {
-      x: { grid: { display: false }, ticks: { color: '#6b7280', font: { size: 12 } } },
-      y: { grid: { color: 'rgba(0,0,0,0.05)' }, ticks: { color: '#9ca3af', font: { size: 11 }, callback: v => v.toLocaleString() } }
-    }
+const baseOpts = (indexAxis='x') => ({
+  responsive:true, maintainAspectRatio:false,
+  plugins:{legend:{display:false}},
+  indexAxis,
+  scales:{
+    x:{grid:{color:'rgba(0,0,0,0.05)'},ticks:{color:'#9ca3af',font:{size:10}}},
+    y:{grid:{display:false},ticks:{color:'#6b7280',font:{size:10}}}
   }
+});
+
+let specFullChart = null;
+
+function buildCharts(id) {
+  if (id === 'overview') {
+    new Chart(document.getElementById('overviewSpec'), {
+      type:'bar',
+      data:{labels:SPEC_LABELS, datasets:[{data:SPEC_DATA,backgroundColor:'#1a56db',borderRadius:3,borderSkipped:false}]},
+      options:{...baseOpts('y'), scales:{
+        x:{grid:{color:'rgba(0,0,0,0.05)'},ticks:{color:'#9ca3af',font:{size:10},callback:v=>(v/1000).toFixed(0)+'k'}},
+        y:{grid:{display:false},ticks:{color:'#6b7280',font:{size:10}}}
+      }}
+    });
+  }
+
+  if (id === 'specialties') {
+    specFullChart = new Chart(document.getElementById('specFull'), {
+      type:'bar',
+      data:{
+        labels:SPEC_LABELS,
+        datasets:[{data:SPEC_DATA,backgroundColor:SPEC_LABELS.map(()=>'#1a56db'),borderRadius:3,borderSkipped:false}]
+      },
+      options:{...baseOpts('y'), scales:{
+        x:{grid:{color:'rgba(0,0,0,0.05)'},ticks:{color:'#9ca3af',font:{size:10},callback:v=>(v/1000).toFixed(0)+'k'}},
+        y:{grid:{display:false},ticks:{color:'#6b7280',font:{size:10}}}
+      }}
+    });
+
+    new Chart(document.getElementById('specPie'), {
+      type:'doughnut',
+      data:{
+        labels:['Trauma & Ortho','Other Medical','Ophthalmology','ENT','Gynaecology','Other'],
+        datasets:[{
+          data:[826172,614175,603966,580054,555528,14091020-826172-614175-603966-580054-555528],
+          backgroundColor:['#1a56db','#1D9E75','#f59e0b','#ef4444','#8b5cf6','#d1d5db'],
+          borderWidth:2,borderColor:'#fff'
+        }]
+      },
+      options:{
+        responsive:true,maintainAspectRatio:false,
+        plugins:{
+          legend:{
+            display:true,position:'right',
+            labels:{font:{size:10},color:'#6b7280',boxWidth:10,padding:8}
+          }
+        },
+        cutout:'65%'
+      }
+    });
+  }
+
+  if (id === 'trusts') {
+    new Chart(document.getElementById('trustBar'), {
+      type:'bar',
+      data:{labels:TRUST_LABELS, datasets:[{data:TRUST_DATA,backgroundColor:'#1D9E75',borderRadius:3,borderSkipped:false}]},
+      options:{...baseOpts('y'), scales:{
+        x:{grid:{color:'rgba(0,0,0,0.05)'},ticks:{color:'#9ca3af',font:{size:10},callback:v=>(v/1000).toFixed(0)+'k'}},
+        y:{grid:{display:false},ticks:{color:'#6b7280',font:{size:10}}}
+      }}
+    });
+  }
+
+  if (id === 'breaches') {
+    new Chart(document.getElementById('breachBar'), {
+      type:'bar',
+      data:{labels:BREACH_LABELS, datasets:[{data:BREACH_DATA,backgroundColor:'#ef4444',borderRadius:3,borderSkipped:false}]},
+      options:{...baseOpts('y'), scales:{
+        x:{grid:{color:'rgba(0,0,0,0.05)'},ticks:{color:'#9ca3af',font:{size:10}}},
+        y:{grid:{display:false},ticks:{color:'#6b7280',font:{size:10}}}
+      }}
+    });
+
+    const compareLabels = ['Mid & S Essex','N Care Alliance','Univ Hosp Sussex','Univ Hosp Leicester','Hull Univ'];
+    new Chart(document.getElementById('compareBar'), {
+      type:'bar',
+      data:{
+        labels:compareLabels,
+        datasets:[
+          {label:'Total (÷100)',data:[3480,2584,2251,2279,1500],backgroundColor:'#1D9E75',borderRadius:3,borderSkipped:false},
+          {label:'52-week breaches',data:[2338,928,818,744,676],backgroundColor:'#ef4444',borderRadius:3,borderSkipped:false}
+        ]
+      },
+      options:{
+        responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{display:false}},
+        scales:{
+          x:{grid:{display:false},ticks:{color:'#6b7280',font:{size:10}}},
+          y:{grid:{color:'rgba(0,0,0,0.05)'},ticks:{color:'#9ca3af',font:{size:10}}}
+        }
+      }
+    });
+  }
+
+  if (id === 'quality') {
+    new Chart(document.getElementById('qualityChart'), {
+      type:'bar',
+      data:{
+        labels:['Total rows','Null values','Negative values'],
+        datasets:[{data:[183400,0,0],backgroundColor:['#1a56db','#1D9E75','#1D9E75'],borderRadius:4,borderSkipped:false}]
+      },
+      options:{
+        responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{display:false}},
+        scales:{
+          x:{grid:{display:false},ticks:{color:'#6b7280',font:{size:11}}},
+          y:{grid:{color:'rgba(0,0,0,0.05)'},ticks:{color:'#9ca3af',font:{size:10},callback:v=>v.toLocaleString()}}
+        }
+      }
+    });
+  }
+}
+
+function filterSpec(type, btn) {
+  document.querySelectorAll('#spec-filters .filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  if (!specFullChart) return;
+  const colors = SPEC_LABELS.map((_, i) => {
+    if (type === 'all') return '#1a56db';
+    if (type === 'surgical') return SURGICAL[i] ? '#1a56db' : '#93c5fd';
+    if (type === 'medical') return !SURGICAL[i] ? '#1a56db' : '#93c5fd';
+    return '#1a56db';
+  });
+  specFullChart.data.datasets[0].backgroundColor = colors;
+  specFullChart.update();
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  window.chartsBuilt = { overview: true };
+  buildCharts('overview');
 });
 </script>
 </body>
