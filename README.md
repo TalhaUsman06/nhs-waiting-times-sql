@@ -1,78 +1,98 @@
-# NHS Waiting Times SQL Analysis
+# NHS Waiting Times Analysis & Dashboard
 
-Exploratory SQL analysis of NHS England Referral-to-Treatment (RTT) waiting times data.
+Exploratory SQL analysis and interactive visualisation of NHS England Referral-to-Treatment (RTT) waiting times data — 183,400 rows covering March 2026.
+
+**🔴 Live Dashboard:** [talhausman06.github.io/nhs-waiting-times-sql](https://talhausman06.github.io/nhs-waiting-times-sql/)
 
 **Dataset:** [NHS England RTT Waiting Times](https://www.england.nhs.uk/statistics/statistical-work-areas/rtt-waiting-times/) — publicly available, updated monthly.
 
 ---
 
+## Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| Data analysis | SQL (SQLite via DB Browser for SQLite) |
+| Visualisation | HTML5, CSS3, JavaScript (vanilla) |
+| Charting library | Chart.js 4.4 |
+| Data source | NHS England open data (CSV, ~183k rows) |
+| Hosting | GitHub Pages |
+
+---
+
 ## Key Findings
 
-*Based on NHS England RTT data for March 2026 (183,400 rows analysed)*
+*Based on NHS England RTT incomplete pathway data, March 2026*
 
 - The national incomplete pathway waiting list stood at **14.09 million** patient pathways as of March 2026
 - **Trauma and Orthopaedic Service** was the most pressured specialty with 826,172 patients waiting — nearly double the next highest specialty (Other Medical Services at 614,175)
-- **Mid and South Essex NHS Foundation Trust** had the highest number of patients waiting over 52 weeks at 2,338 — more than double the second-placed trust (Northern Care Alliance at 928)
-- Data quality check across all 183,400 rows found **zero null values and zero negative values**, indicating a clean and consistent dataset
+- **Mid and South Essex NHS Foundation Trust** had the highest number of patients waiting over 52 weeks at 2,338 — more than 2.5× the second-placed trust (Northern Care Alliance at 928)
+- Data quality check across all 183,400 rows found **zero null values and zero negative values**, confirming a clean and consistent dataset
 
 ---
 
-## Queries Included
+## What's in this repo
+
+```
+nhs-waiting-times-sql/
+├── analysis.sql      # 7 SQL queries with real results and comments
+├── index.html        # Interactive dashboard (Chart.js visualisations)
+└── README.md
+```
+
+---
+
+## SQL Queries Included
 
 | Query | What it answers |
 |-------|----------------|
-| Q1 — Monthly totals | Is the waiting list growing or shrinking? |
-| Q2 — 18-week performance | How far is the NHS from its constitutional target? |
-| Q3 — Worst specialties | Which clinical areas face the most pressure? |
-| Q4 — 52-week breaches by trust | Which trusts have the most serious waits? |
-| Q5 — 52-week trend | How have extreme waits changed over time? |
-| Q6 — Regional breakdown | Where in England are waits worst? |
-| Q7 — Year-on-year improvement | Which specialties got better or worse? |
-| Q8 — Wait-time distribution | Full picture across all time bands |
-| Q9 — Trust + specialty pinpoint | Exact bottlenecks in the system |
-| Q10 — Data quality check | Validating the dataset before drawing conclusions |
+| Q1 — Total patients waiting | Scale of the national waiting list |
+| Q2 — Trusts with most patients | Where capacity pressure is concentrated |
+| Q3 — Specialties with most patients | Which clinical areas face the most demand |
+| Q4 — 52-week breaches by trust | Which trusts have the most serious long waits |
+| Q5 — Data quality check | Validating the dataset before drawing conclusions |
+| Q6 — Patients crossing 18-week mark | Performance against the NHS constitutional standard |
+| Q7 — Regional breakdown by provider parent | Geographic distribution of waiting list pressure |
 
 ---
 
-## How to Run
+## How to Run Locally
 
-### Option A — SQLite (simplest, no install needed beyond Python)
+### Step 1 — Download the data
+Go to [NHS England RTT Waiting Times](https://www.england.nhs.uk/statistics/statistical-work-areas/rtt-waiting-times/), download the latest **Incomplete Pathways** CSV.
 
-```bash
-# Download the RTT CSV from NHS England website
-# Then load it:
-python3 load_data.py   # see load_data.py in this repo
-sqlite3 nhs.db < analysis.sql
-```
+### Step 2 — Load into SQLite
+1. Download [DB Browser for SQLite](https://sqlitebrowser.org/dl/) (free)
+2. New Database → save as `nhs.db`
+3. File → Import → Table from CSV → tick "Column names in first line" → table name: `waiting_times`
 
-### Option B — PostgreSQL
-
-```bash
-psql -U postgres -d nhs_analysis -f analysis.sql
-```
+### Step 3 — Run the queries
+Open the Execute SQL tab, paste queries from `analysis.sql` and run.
 
 ---
 
 ## What I Learned
 
-- NHS RTT data uses specific coding conventions (treatment function codes, RTT part types) that require understanding before querying
-- The 18-week constitutional standard is a binary measure — in practice, the distribution of waits matters more than the headline figure
-- Data quality checks (Q10) surfaced a small number of rows where `within_18_weeks > total_all`, suggesting reporting inconsistencies at trust level
-- Window functions and CTEs (Q7) make year-on-year comparisons clean and readable without needing a self-join
+- NHS RTT data uses specific coding conventions (`RTT Part Type`: Part_1A, Part_1B, Part_2, Part_2A, Part_3) that must be understood before filtering — querying without the right `WHERE` clause returns no results
+- Real public datasets require exploration before analysis — running `PRAGMA table_info()` and `SELECT DISTINCT` to understand the schema is essential
+- Data quality checks should always be included in any analysis — even well-maintained government datasets can have reporting inconsistencies at trust level
+- `CAST(column AS INTEGER)` is necessary in SQLite when numeric columns are stored as TEXT during CSV import
 
 ---
 
 ## Skills Demonstrated
 
-- Aggregations, GROUP BY, HAVING
-- CTEs (WITH clause)
-- JOINs across multiple tables
+- SQL aggregations, `GROUP BY`, `HAVING`, `ORDER BY`
+- `CAST` and type handling in SQLite
+- Data exploration with `PRAGMA table_info()` and `SELECT DISTINCT`
 - Data quality validation
-- Translating a real-world policy question into a SQL query
+- Translating real-world policy questions into SQL queries
+- Frontend data visualisation with Chart.js
+- Deploying a static site via GitHub Pages
 
 ---
 
 ## Author
 
-Talha Usman — MSc Computer Science, University of Law London  
-[linkedin.com/in/talha-usman](https://linkedin.com/in/talha-usman)
+Talha Usman — MSc Computer Science, University of Law London
+[linkedin.com/in/talha-usman](https://linkedin.com/in/talha-usman) · [github.com/TalhaUsman06](https://github.com/TalhaUsman06)
