@@ -1,0 +1,199 @@
+ 
+ NHS RTT Waiting Times Database
+ Query Report — 10 Business Queries
+ Assessment Task 2
+ 
+
+
+ 
+ Q1. Simple SELECT — List all trusts in the London region
+ 
+ Business question: Which NHS trusts operate within the London region?
+ This helps regional commissioners identify all providers in their area.
+
+SELECT t.trust_name,
+       t.trust_code,
+       t.parent_organisation
+FROM   Trust t
+JOIN   Region r ON t.region_id = r.region_id
+WHERE  r.region_name = 'London'
+ORDER BY t.trust_name;
+
+
+ 
+ Q2. Simple SELECT with filter — All breaching pathways
+ 
+ Business question: Which patient pathways are currently in breach
+ of the 18-week RTT standard?
+ Identifies pathways where patients have waited beyond the legal target.
+
+SELECT p.pathway_id,
+       t.trust_name,
+       s.specialty_name,
+       p.rtt_part_type,
+       p.weeks_waiting,
+       p.patient_count
+FROM   Patient_Pathway p
+JOIN   Trust     t ON p.trust_id     = t.trust_id
+JOIN   Specialty s ON p.specialty_id = s.specialty_id
+WHERE  p.is_breach = 1
+ORDER BY p.weeks_waiting DESC;
+
+
+ 
+ Q3. Aggregate — Total patients waiting per region
+ 
+ Business question: How many patients in total are waiting in each NHS region?
+ Gives an overall demand picture for regional planning.
+
+SELECT r.region_name,
+       SUM(w.total_waiting) AS total_patients_waiting
+FROM   Waiting_List_Snapshot w
+JOIN   Trust  t ON w.trust_id  = t.trust_id
+JOIN   Region r ON t.region_id = r.region_id
+GROUP BY r.region_name
+ORDER BY total_patients_waiting DESC;
+
+
+ 
+ Q4. GROUP BY — Breach count by specialty
+ 
+ Business question: Which clinical specialties have the highest number
+ of breaching pathway records?
+ Helps clinical directors prioritise capacity investment.
+
+SELECT s.specialty_name,
+       s.department,
+       COUNT(*)              AS breach_records,
+       SUM(p.patient_count)  AS breach_patient_count
+FROM   Patient_Pathway p
+JOIN   Specialty s ON p.specialty_id = s.specialty_id
+WHERE  p.is_breach = 1
+GROUP BY s.specialty_name, s.department
+ORDER BY breach_patient_count DESC;
+
+
+ 
+ Q5. JOIN across 3 tables — Full pathway detail report
+ 
+ Business question: Produce a full audit listing of all patient pathways
+ with trust, region, and specialty context.
+ Used by performance managers to review the complete dataset.
+
+SELECT p.pathway_id,
+       r.region_name,
+       t.trust_name,
+       s.specialty_name,
+       p.rtt_part_type,
+       p.weeks_waiting,
+       p.patient_count,
+       CASE WHEN p.is_breach = 1 THEN 'BREACH' ELSE 'Within target' END AS status
+FROM   Patient_Pathway p
+JOIN   Trust     t ON p.trust_id     = t.trust_id
+JOIN   Region    r ON t.region_id    = r.region_id
+JOIN   Specialty s ON p.specialty_id = s.specialty_id
+ORDER BY r.region_name, t.trust_name, s.specialty_name;
+
+
+ 
+ Q6. Subquery — Trusts with above-average total waiting lists
+ 
+ Business question: Which trusts have a total waiting list size
+ above the national average across all snapshots?
+ Flags trusts that may be under-resourced relative to peers.
+
+SELECT t.trust_name,
+       t.trust_code,
+       r.region_name,
+       SUM(w.total_waiting) AS trust_total_waiting
+FROM   Waiting_List_Snapshot w
+JOIN   Trust  t ON w.trust_id  = t.trust_id
+JOIN   Region r ON t.region_id = r.region_id
+GROUP BY t.trust_id, t.trust_name, t.trust_code, r.region_name
+HAVING SUM(w.total_waiting) > (
+    SELECT AVG(trust_sum)
+    FROM (
+        SELECT SUM(total_waiting) AS trust_sum
+        FROM   Waiting_List_Snapshot
+        GROUP BY trust_id
+    )
+)
+ORDER BY trust_total_waiting DESC;
+
+
+ 
+ Q7. GROUP BY with HAVING — Specialties with >500 breaching patients
+ 
+ Business question: Which specialties have more than 500 patients
+ collectively breaching the 18-week standard?
+ Drives elective recovery planning targets.
+
+SELECT s.specialty_name,
+       SUM(p.patient_count) AS total_breach_patients
+FROM   Patient_Pathway p
+JOIN   Specialty s ON p.specialty_id = s.specialty_id
+WHERE  p.is_breach = 1
+GROUP BY s.specialty_name
+HAVING SUM(p.patient_count) > 500
+ORDER BY total_breach_patients DESC;
+
+
+ 
+ Q8. Aggregate with ratio — Breach rate per trust
+ 
+ Business question: What percentage of each trust's pathway records
+ are in breach of the 18-week standard?
+ Calculates a performance KPI comparable to NHS England's RTT dashboard.
+
+SELECT t.trust_name,
+       COUNT(*)                                                        AS total_pathways,
+       SUM(p.is_breach)                                               AS breaching_pathways,
+       ROUND(100.0 * SUM(p.is_breach) / COUNT(*), 1)                 AS breach_rate_pct,
+       SUM(p.patient_count)                                           AS total_patients,
+       SUM(CASE WHEN p.is_breach = 1 THEN p.patient_count ELSE 0 END) AS breach_patients
+FROM   Patient_Pathway p
+JOIN   Trust t ON p.trust_id = t.trust_id
+GROUP BY t.trust_id, t.trust_name
+ORDER BY breach_rate_pct DESC;
+
+
+ 
+ Q9. Correlated subquery — Most pressured specialty per trust
+ 
+ Business question: For each trust, which specialty has the longest
+ maximum waiting time?
+ Identifies the single biggest pressure point for each provider.
+
+SELECT t.trust_name,
+       s.specialty_name,
+       p.weeks_waiting AS max_weeks_waiting
+FROM   Patient_Pathway p
+JOIN   Trust     t ON p.trust_id     = t.trust_id
+JOIN   Specialty s ON p.specialty_id = s.specialty_id
+WHERE  p.weeks_waiting = (
+    SELECT MAX(p2.weeks_waiting)
+    FROM   Patient_Pathway p2
+    WHERE  p2.trust_id = p.trust_id
+)
+ORDER BY max_weeks_waiting DESC;
+
+
+ 
+ Q10. Multi-level aggregation — Department-level summary
+ 
+ Business question: Comparing Surgical vs Medical departments,
+ which carries a higher total patient burden and breach volume?
+ Supports directorate-level resource allocation decisions.
+
+SELECT s.department,
+       COUNT(DISTINCT s.specialty_id)                                  AS specialties_count,
+       SUM(p.patient_count)                                            AS total_patients,
+       SUM(CASE WHEN p.is_breach = 1 THEN p.patient_count ELSE 0 END) AS breach_patients,
+       ROUND(
+           100.0 * SUM(CASE WHEN p.is_breach = 1 THEN p.patient_count ELSE 0 END)
+           / NULLIF(SUM(p.patient_count), 0),
+       1)                                                              AS breach_rate_pct
+FROM   Patient_Pathway p
+JOIN   Specialty s ON p.specialty_id = s.specialty_id
+GROUP BY s.department
+ORDER BY total_patients DESC;
